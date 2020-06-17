@@ -32,6 +32,7 @@ namespace gazebo
 {
 
   #define DEPTH_CAMERA_NAME "depth"
+  #define DEPTH_REGISTERED_CAMERA_NAME "depth_registered"
   #define COLOR_CAMERA_NAME "color"
   #define IRED1_CAMERA_NAME "ired1"
   #define IRED2_CAMERA_NAME "ired2"
@@ -54,7 +55,9 @@ namespace gazebo
     /// \brief Callback that publishes a received Depth Camera Frame as an
     /// ImageStamped
     /// message.
-    public: virtual void OnNewDepthFrame();
+    public: virtual void OnNewDepthFrame(std::vector<uint16_t> *depth_map,
+                                         const rendering::DepthCameraPtr cam,
+                                         const transport::PublisherPtr pub);
 
     /// \brief Callback that publishes a received Camera Frame as an
     /// ImageStamped message.
@@ -69,6 +72,9 @@ namespace gazebo
 
     /// \brief Pointer to the Depth Camera Renderer.
     protected: rendering::DepthCameraPtr depthCam;
+
+    /// \brief Pointer to the Registered Depth Camera Renderer.
+    protected: rendering::DepthCameraPtr depthRegisteredCam;
 
     /// \brief Pointer to the Color Camera Renderer.
     protected: rendering::CameraPtr colorCam;
@@ -85,8 +91,14 @@ namespace gazebo
     // \brief Store Real Sense depth map data.
     protected: std::vector<uint16_t> depthMap;
 
+    // \brief Store Real Sense depth map data.
+    protected: std::vector<uint16_t> depthRegisteredMap;
+
     /// \brief Pointer to the Depth Publisher.
     protected: transport::PublisherPtr depthPub;
+
+    /// \brief Pointer to the Depth Registered Publisher.
+    protected: transport::PublisherPtr depthRegisteredPub;
 
     /// \brief Pointer to the Color Publisher.
     protected: transport::PublisherPtr colorPub;
@@ -100,10 +112,13 @@ namespace gazebo
     /// \brief Pointer to the Depth Camera callback connection.
     protected: event::ConnectionPtr newDepthFrameConn;
 
-    /// \brief Pointer to the Depth Camera callback connection.
+    /// \brief Pointer to the Depth Registered Camera callback connection.
+    protected: event::ConnectionPtr newDepthRegisteredFrameConn;
+
+    /// \brief Pointer to the Infrered1 Camera callback connection.
     protected: event::ConnectionPtr newIred1FrameConn;
 
-    /// \brief Pointer to the Infrared Camera callback connection.
+    /// \brief Pointer to the Infrared2 Camera callback connection.
     protected: event::ConnectionPtr newIred2FrameConn;
 
     /// \brief Pointer to the Color Camera callback connection.

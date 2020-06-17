@@ -46,6 +46,7 @@ void GazeboRosRealsense::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   this->ir1_pub_ = this->itnode_->advertiseCamera("camera/ir/image_raw", 2);
   this->ir2_pub_ = this->itnode_->advertiseCamera("camera/ir2/image_raw", 2);
   this->depth_pub_ = this->itnode_->advertiseCamera("camera/depth/image_raw", 2);
+  this->depth_registered_pub_ = this->itnode_->advertiseCamera("camera/depth_registered/image_raw", 2);
 }
 
 void GazeboRosRealsense::OnNewFrame(const rendering::CameraPtr cam,
@@ -97,7 +98,9 @@ void GazeboRosRealsense::OnNewFrame(const rendering::CameraPtr cam,
   image_pub->publish(this->image_msg_, camera_info_msg);
 }
 
-void GazeboRosRealsense::OnNewDepthFrame()
+void GazeboRosRealsense::OnNewDepthFrame(std::vector<uint16_t> *depth_map,
+                                         const rendering::DepthCameraPtr cam,
+                                         const transport::PublisherPtr pub)
 {
   // get current time
 #if GAZEBO_MAJOR_VERSION >= 9
@@ -106,7 +109,14 @@ void GazeboRosRealsense::OnNewDepthFrame()
   common::Time current_time = this->world->GetSimTime();
 #endif
 
-  RealSensePlugin::OnNewDepthFrame();
+  // identify camera
+  std::string camera_id = extractCameraName(cam->Name());
+  const std::map<std::string, image_transport::CameraPublisher*> camera_publishers = {
+    {DEPTH_CAMERA_NAME, &(this->depth_pub_)},
+    {DEPTH_REGISTERED_CAMERA_NAME, &(this->depth_registered_pub_)},
+  };
+  const auto image_pub = camera_publishers.at(camera_id);
+  RealSensePlugin::OnNewDepthFrame(depth_map, cam, pub);
 
   // copy data into image
   this->depth_msg_.header.frame_id = prefix+COLOR_CAMERA_NAME;
@@ -119,13 +129,13 @@ void GazeboRosRealsense::OnNewDepthFrame()
   // copy from simulation image to ROS msg
   fillImage(this->depth_msg_,
     pixel_format,
-    this->depthCam->ImageHeight(), this->depthCam->ImageWidth(),
-    2 * this->depthCam->ImageWidth(),
-    reinterpret_cast<const void*>(this->depthMap.data()));
+    cam->ImageHeight(), cam->ImageWidth(),
+    2 * cam->ImageWidth(),
+    reinterpret_cast<const void*>(depth_map->data()));
 
   // publish to ROS
-  auto depth_info_msg = cameraInfo(this->depth_msg_, this->depthCam->HFOV().Radian());
-  this->depth_pub_.publish(this->depth_msg_, depth_info_msg);
+  auto depth_info_msg = cameraInfo(this->depth_msg_, cam->HFOV().Radian());
+  image_pub->publish(this->depth_msg_, depth_info_msg);
 }
 
 }
@@ -137,6 +147,8 @@ namespace
     if (name.find(COLOR_CAMERA_NAME) != std::string::npos) return COLOR_CAMERA_NAME;
     if (name.find(IRED1_CAMERA_NAME) != std::string::npos) return IRED1_CAMERA_NAME;
     if (name.find(IRED2_CAMERA_NAME) != std::string::npos) return IRED2_CAMERA_NAME;
+    if (name.find(DEPTH_REGISTERED_CAMERA_NAME) != std::string::npos) return DEPTH_REGISTERED_CAMERA_NAME; // needs to be checked before regular depth
+    if (name.find(DEPTH_CAMERA_NAME) != std::string::npos) return DEPTH_CAMERA_NAME;
 
     ROS_ERROR("Unknown camera name");
     return COLOR_CAMERA_NAME;

@@ -30,7 +30,9 @@ namespace gazebo
 
     /// \brief Callback that publishes a received Depth Camera Frame as an
     /// ImageStamped message.
-    public: virtual void OnNewDepthFrame();
+    public: virtual void OnNewDepthFrame(std::vector<uint16_t> *depth_map,
+                                         const rendering::DepthCameraPtr cam,
+                                         const transport::PublisherPtr pub);
 
     /// \brief Callback that publishes a received Camera Frame as an
     /// ImageStamped message.
@@ -43,7 +45,7 @@ namespace gazebo
     ///  A node will be instantiated if it does not exist.
     protected: ros::NodeHandle* rosnode_;
     private: image_transport::ImageTransport* itnode_;
-    protected: image_transport::CameraPublisher color_pub_, ir1_pub_, ir2_pub_, depth_pub_;
+    protected: image_transport::CameraPublisher color_pub_, ir1_pub_, ir2_pub_, depth_pub_, depth_registered_pub_;
 
     /// \brief ROS image messages
     protected: sensor_msgs::Image image_msg_, depth_msg_;
