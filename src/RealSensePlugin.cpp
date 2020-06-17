@@ -78,9 +78,11 @@ void RealSensePlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   this->depthCam = std::dynamic_pointer_cast<sensors::DepthCameraSensor>(
                                 smanager->GetSensor(prefix+DEPTH_CAMERA_NAME))
                                 ->DepthCamera();
-  this->depthRegisteredCam = std::dynamic_pointer_cast<sensors::DepthCameraSensor>(
-                                smanager->GetSensor(prefix+DEPTH_REGISTERED_CAMERA_NAME))
-                                ->DepthCamera();
+  if(smanager->GetSensor(prefix+DEPTH_REGISTERED_CAMERA_NAME)) {
+    this->depthRegisteredCam = std::dynamic_pointer_cast<sensors::DepthCameraSensor>(
+                                  smanager->GetSensor(prefix+DEPTH_REGISTERED_CAMERA_NAME))
+                                  ->DepthCamera();
+  }
   this->ired1Cam = std::dynamic_pointer_cast<sensors::CameraSensor>(
                                 smanager->GetSensor(prefix+IRED1_CAMERA_NAME))
                                 ->Camera();
@@ -102,7 +104,6 @@ void RealSensePlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   {
     std::cerr << "RealSensePlugin: Depth Registered Camera has not been found"
               << std::endl;
-    return;
   }
   if (!this->ired1Cam)
   {
@@ -134,15 +135,17 @@ void RealSensePlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
               << std::endl;
     return;
   }
-  try
-  {
-    this->depthRegisteredMap.resize(this->depthRegisteredCam->ImageWidth() * this->depthRegisteredCam->ImageHeight());
-  }
-  catch (std::bad_alloc &e)
-  {
-    std::cerr << "RealSensePlugin: depthRegisteredMap allocation failed: " << e.what()
-              << std::endl;
-    return;
+  if(this->depthRegisteredCam) {
+    try
+    {
+      this->depthRegisteredMap.resize(this->depthRegisteredCam->ImageWidth() * this->depthRegisteredCam->ImageHeight());
+    }
+    catch (std::bad_alloc &e)
+    {
+      std::cerr << "RealSensePlugin: depthRegisteredMap allocation failed: " << e.what()
+                << std::endl;
+      return;
+    }
   }
 
   // Setup Transport Node
@@ -159,8 +162,10 @@ void RealSensePlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   this->depthPub = this->transportNode->Advertise<msgs::ImageStamped>(
           rsTopicRoot + DEPTH_CAMERA_TOPIC, 1, DEPTH_PUB_FREQ_HZ);
-  this->depthRegisteredPub = this->transportNode->Advertise<msgs::ImageStamped>(
-          rsTopicRoot + DEPTH_REGISTERED_CAMERA_TOPIC, 1, DEPTH_REGISTERED_PUB_FREQ_HZ);
+  if(this->depthRegisteredCam) {
+    this->depthRegisteredPub = this->transportNode->Advertise<msgs::ImageStamped>(
+            rsTopicRoot + DEPTH_REGISTERED_CAMERA_TOPIC, 1, DEPTH_REGISTERED_PUB_FREQ_HZ);
+  }
   this->ired1Pub = this->transportNode->Advertise<msgs::ImageStamped>(
           rsTopicRoot + IRED1_CAMERA_TOPIC, 1, IRED1_PUB_FREQ_HZ);
   this->ired2Pub = this->transportNode->Advertise<msgs::ImageStamped>(
@@ -174,10 +179,12 @@ void RealSensePlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
           std::bind(&RealSensePlugin::OnNewDepthFrame, this, &this->depthMap, 
                     this->depthCam, this->depthPub));
 
-  this->newDepthRegisteredFrameConn = 
-      this->depthRegisteredCam->ConnectNewDepthFrame(
-          std::bind(&RealSensePlugin::OnNewDepthFrame, this, &this->depthRegisteredMap, 
-                    this->depthRegisteredCam, this->depthRegisteredPub));
+  if(this->depthRegisteredCam) {
+    this->newDepthRegisteredFrameConn = 
+        this->depthRegisteredCam->ConnectNewDepthFrame(
+            std::bind(&RealSensePlugin::OnNewDepthFrame, this, &this->depthRegisteredMap, 
+                      this->depthRegisteredCam, this->depthRegisteredPub));
+  }
 
   this->newIred1FrameConn =
       this->ired1Cam->ConnectNewImageFrame(

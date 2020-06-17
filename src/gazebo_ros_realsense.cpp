@@ -46,7 +46,9 @@ void GazeboRosRealsense::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   this->ir1_pub_ = this->itnode_->advertiseCamera("camera/ir/image_raw", 2);
   this->ir2_pub_ = this->itnode_->advertiseCamera("camera/ir2/image_raw", 2);
   this->depth_pub_ = this->itnode_->advertiseCamera("camera/depth/image_raw", 2);
-  this->depth_registered_pub_ = this->itnode_->advertiseCamera("camera/depth_registered/image_raw", 2);
+  if(RealSensePlugin::depthRegisteredCam) {
+    this->depth_registered_pub_ = this->itnode_->advertiseCamera("camera/depth_registered/image_raw", 2);
+  }
 }
 
 void GazeboRosRealsense::OnNewFrame(const rendering::CameraPtr cam,
