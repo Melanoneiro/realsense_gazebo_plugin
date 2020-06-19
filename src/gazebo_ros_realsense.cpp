@@ -121,7 +121,11 @@ void GazeboRosRealsense::OnNewDepthFrame(std::vector<uint16_t> *depth_map,
   RealSensePlugin::OnNewDepthFrame(depth_map, cam, pub);
 
   // copy data into image
-  this->depth_msg_.header.frame_id = prefix+camera_id;
+  if(!camera_id.compare(DEPTH_REGISTERED_CAMERA_NAME)) {
+    this->depth_msg_.header.frame_id = prefix+COLOR_CAMERA_NAME;
+  } else {
+    this->depth_msg_.header.frame_id = prefix+camera_id;
+  }
   this->depth_msg_.header.stamp.sec = current_time.sec;
   this->depth_msg_.header.stamp.nsec = current_time.nsec;
 
